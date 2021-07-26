@@ -1,0 +1,41 @@
+---
+# Default locations and versions when 'nginx_install_from' is set to 'source'
+pcre_version: pcre-8.44
+zlib_version: zlib-1.2.11
+openssl_version: openssl-1.1.1g
+nginx_version: nginx-1.21.0
+
+# Pagespeed role vars:
+## Aplicar opcion de descargar sin versión estable
+
+nps_version: 1.13.35.2
+nps_release: stable
+psol_url: "https://dl.google.com/dl/page-speed/psol/{{ nps_version }}-x64.tar.gz"
+pagespeed_url: "https://github.com/pagespeed/ngx_pagespeed/archive/v{{ nps_version }}-{{ nps_release }}.zip"
+
+nginx_cache_path: /etc/nginx/cache
+
+website: domain.local
+server_signature: 'GameBoy'
+change_server_signature: false
+
+nginx_sites_path: /etc/nginx/conf.d/
+nginx_conf_path: /etc/nginx/nginx.conf
+
+nginx_configure: >-
+    ./configure
+    --conf-path="{{ nginx_conf_path }}"
+    --error-log-path=/var/log/nginx/error.log
+    --http-log-path=/var/log/nginx/access.log
+    --lock-path=/var/lock/nginx.lock
+    --modules-path=/usr/lib/nginx/modules
+    --prefix=/usr
+    --pid-path=/var/run/nginx.pid
+    --with-http_ssl_module
+    --with-http_v2_module
+    --with-mail=dynamic
+    --with-stream
+    --with-pcre=../{{ pcre_version }}
+    --with-zlib=../{{ zlib_version }}
+    --with-openssl=../{{ openssl_version }}
+    --add-module=../incubator-pagespeed-ngx-{{ nps_version }}-{{ nps_release }}

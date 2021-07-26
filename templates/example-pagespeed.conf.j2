@@ -1,0 +1,41 @@
+server {
+    listen        80;
+    server_name   {{ website }};
+
+    access_log /var/log/nginx/access-{{ website }}.log;
+    error_log /var/log/nginx/error-{{ website }}.log;
+
+    location /usr/local/nginx {
+        root   html;
+        index  index.html index.htm;
+    }
+
+    ####################################
+    #### PageSpeed Module (example) ####
+    ####################################    
+    pagespeed on;
+    pagespeed RewriteLevel CoreFilters;
+
+    # You can change, but cannot suppress the injection of this header. This is because it is used to prevent infinite loops and unnecessary rewrites when PageSpeed fetches resources from an origin that also uses PageSpeed. 
+    pagespeed XHeaderValue "PageSpeed";
+
+    pagespeed FileCachePath {{ nginx_cache_path }};
+    pagespeed RespectVary on;
+    pagespeed LowercaseHtmlNames on;
+
+    pagespeed EnableFilters responsive_images,resize_images;
+    pagespeed EnableFilters recompress_images;
+    pagespeed EnableFilters lazyload_images;
+    pagespeed LazyloadImagesAfterOnload off;
+    pagespeed JpegRecompressionQuality 80;
+
+    pagespeed EnableFilters collapse_whitespace;
+    pagespeed EnableFilters remove_comments;
+
+    pagespeed EnableFilters make_show_ads_async;
+    pagespeed EnableFilters make_google_analytics_async;
+
+    pagespeed EnableFilters inline_google_font_css;
+    pagespeed FetchHttps enable;
+    ####################################
+}

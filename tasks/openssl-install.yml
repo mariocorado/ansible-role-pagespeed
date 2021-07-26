@@ -1,0 +1,40 @@
+---
+- name: Check for OpenSSL install
+  stat:
+    path: /tmp/{{ openssl_version }}
+  register: openssl_result
+
+- name: Install OpenSSL dependency from source
+  block:
+    - name: Download OpenSSL dependency
+      get_url:
+        url: "https://www.openssl.org/source/{{ openssl_version }}.tar.gz"
+        dest: "/tmp/{{ openssl_version }}.tar.gz"
+        mode: 0600
+        validate_certs: "{{ (ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] is version('6', '=='))
+                        | ternary('false', 'true') }}"
+      register: openssl_source
+
+    - name: Unpack OpenSSL dependency
+      unarchive:
+        copy: false
+        dest: /tmp/
+        src: "{{ openssl_source.dest }}"
+        mode: 0700
+
+    - name: Configure OpenSSL dependency
+      command: ./config --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared zlib
+      args:
+        chdir: "/tmp/{{ openssl_version }}"
+
+    - name: Make OpenSSL dependency
+      make:
+        chdir: "/tmp/{{ openssl_version }}"
+
+    - name: Install OpenSSL dependency
+      make:
+        chdir: "/tmp/{{ openssl_version }}"
+        target: install
+  when:
+    - not openssl_result.stat.exists | bool
+    - not ansible_check_mode | bool

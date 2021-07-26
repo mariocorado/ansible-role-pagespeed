@@ -1,0 +1,103 @@
+---
+- name: Add NGINX user
+  user:
+    name: nginx
+
+- name: Create nginx sites directory
+  file:
+    path: "{{ nginx_sites_path }}"
+    owner: root
+    group: root
+    mode: '644'
+    state: directory
+
+- name: Create nginx cache directory
+  file:
+    path: "{{ nginx_cache_path }}"
+    owner: nginx
+    group: nginx
+    mode: '644'
+    state: directory
+
+- name: Check for nginx install
+  stat:
+    path: /tmp/{{ nginx_version }}
+  register: nginx_result
+
+- name: Download NGINX
+  get_url:
+    url: "https://nginx.org/download/{{ nginx_version }}.tar.gz"
+    dest: "/tmp/{{ nginx_version }}.tar.gz"
+    mode: 0600
+  register: nginx_source
+  when: not nginx_result.stat.exists | bool
+
+- name: Unpack NGINX
+  unarchive:
+    copy: false
+    dest: /tmp/
+    src: "{{ nginx_source.dest }}"
+    mode: 0755
+  when: nginx_source.changed
+
+- name: Change nginx (server) signature
+  replace:
+    path: "/tmp/{{ nginx_version }}/src/http/ngx_http_header_filter_module.c"
+    regexp: '(?<="Server: )("|)(.*)(?= CRLF;)'
+    replace: "{{ server_signature }}\""
+  register: server_signature
+  when: change_server_signature
+
+- name: Configure NGINX
+  command: "{{ nginx_configure }}"
+  args:
+    chdir: "/tmp/{{ nginx_version }}"
+  register: nginx_configure
+  when: server_signature.changed or nginx_source.changed
+
+- name: Make NGINX
+  make:
+    chdir: "/tmp/{{ nginx_version }}"
+  when: nginx_configure.changed
+
+- name: Install NGINX
+  make:
+    chdir: "/tmp/{{ nginx_version }}"
+    target: install
+  when: nginx_configure.changed
+
+- name: Copy nginx.conf template
+  template:
+    src: nginx.conf.j2
+    dest: "{{ nginx_conf_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: (Handler) Start/reload NGINX
+
+- name: Copy example pagespeed template
+  template:
+    src: example-pagespeed.conf.j2
+    dest: "{{ nginx_sites_path }}/example-pagespeed.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: (Handler) Start/reload NGINX
+
+- name: Upload systemd NGINX service file
+  copy:
+    src: services/nginx.systemd
+    dest: /lib/systemd/system/nginx.service
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_facts['service_mgr'] == "systemd"
+
+- name: Enable systemd NGINX service file
+  systemd:
+    daemon_reload: 'yes'
+    name: nginx
+    state: restarted
+    enabled: 'yes'
+  when: ansible_facts['service_mgr'] == "systemd" and nginx_configure.changed
+  notify: "(Handler) Run NGINX"

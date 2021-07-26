@@ -1,0 +1,40 @@
+---
+- name: Check for ZLib install
+  stat:
+    path: /tmp/{{ zlib_version }}
+  register: zlib_result
+
+- name: Install ZLib dependency from source
+  block:
+    - name: Download ZLib dependency
+      get_url:
+        url: "https://zlib.net/{{ zlib_version }}.tar.gz"
+        dest: "/tmp/{{ zlib_version }}.tar.gz"
+        mode: 0600
+        validate_certs: "{{ (ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] is version('6', '=='))
+                        | ternary('false', 'true') }}"
+      register: zlib_source
+
+    - name: Unpack ZLib dependency
+      unarchive:
+        copy: false
+        dest: /tmp/
+        src: "{{ zlib_source.dest }}"
+        mode: 0700
+
+    - name: Configure ZLib dependency
+      command: ./configure
+      args:
+        chdir: "/tmp/{{ zlib_version }}"
+
+    - name: Make ZLib dependency
+      make:
+        chdir: "/tmp/{{ zlib_version }}"
+
+    - name: Install ZLib dependency
+      make:
+        chdir: "/tmp/{{ zlib_version }}"
+        target: install
+  when:
+    - not zlib_result.stat.exists | bool
+    - not ansible_check_mode | bool

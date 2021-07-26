@@ -1,0 +1,22 @@
+---
+- name: Check for PageSpeed install
+  stat:
+    path: "/tmp/incubator-pagespeed-ngx-{{ nps_version }}-{{ nps_release }}"
+  register: pagespeed_result
+
+- name: Download Pagespeed and PSOL library
+  block:
+    - name: Download and unarchive Google Pagespeed package
+      unarchive:
+        src: "{{ pagespeed_url }}"
+        dest: /tmp
+        remote_src: 'yes'
+
+    - name: Download and unarchive PSOL library
+      unarchive:
+        src: "{{ psol_url }}"
+        dest: "/tmp/incubator-pagespeed-ngx-{{ nps_version }}-{{ nps_release }}"
+        remote_src: 'yes'
+      when:
+        - not pagespeed_result.stat.exists | bool
+        - not ansible_check_mode | bool

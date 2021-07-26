@@ -1,0 +1,40 @@
+---
+- name: Check for PCRE install
+  stat:
+    path: /tmp/{{ pcre_version }}
+  register: pcre_result
+
+- name: Install PCRE dependence from source
+  block:
+    - name: Download PCRE dependency
+      get_url:
+        url: "https://ftp.pcre.org/pub/pcre/{{ pcre_version }}.tar.gz"
+        dest: "/tmp/{{ pcre_version }}.tar.gz"
+        mode: 0600
+        validate_certs: "{{ (ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] is version('6', '=='))
+                        | ternary('false', 'true') }}"
+      register: pcre_source
+
+    - name: Unpack PCRE dependency
+      unarchive:
+        copy: false
+        dest: /tmp/
+        src: "{{ pcre_source.dest }}"
+        mode: 0700
+
+    - name: Configure PCRE dependency
+      command: ./configure
+      args:
+        chdir: "/tmp/{{ pcre_version }}"
+
+    - name: Make PCRE dependency
+      make:
+        chdir: "/tmp/{{ pcre_version }}"
+
+    - name: Install PCRE dependency
+      make:
+        chdir: "/tmp/{{ pcre_version }}"
+        target: install
+  when:
+    - not pcre_result.stat.exists | bool
+    - not ansible_check_mode | bool
