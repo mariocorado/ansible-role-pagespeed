@@ -16,7 +16,7 @@ pagespeed_url: "https://github.com/pagespeed/ngx_pagespeed/archive/v{{ nps_versi
 nginx_cache_path: /etc/nginx/cache
 
 website: domain.local
-server_signature: 'GameBoy'
+server_signature: 'TimeMachine'
 change_server_signature: false
 
 nginx_sites_path: /etc/nginx/conf.d/
